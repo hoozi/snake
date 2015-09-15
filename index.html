@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>Snake</title>
+<meta name="description" content="">
+<meta name="keywords" content="">
+<link href="" rel="stylesheet">
+<style>
+* {margin:0; padding:0;}
+body {background:; -moz-user-select:none; text-align:center; font-size:12px;}
+table {margin:80px auto 10px auto; overflow:hidden; border-collapse:collapse; }
+td {width:10px; height:10px; ; background:#000;}
+.food{background-color:green;}
+.snake{background-color:#fff;}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<ul>
+	<li>1.基本实现一个贪吃蛇的游戏</li>
+	<li>2.方向键可以控制蛇的方向</li>
+	<li>3.未来还有完善的空间</li>
+</ul>
+<script>
+var $ = {
+	id: function(id){
+		return document.getElementById(id);
+	},
+	tagName: function(tag, parent){
+		var parent = parent || document;
+		return parent.getElementsByTagName(tag);
+	},
+	create: function(tag) {
+		return document.createElement(tag);
+	}
+};
+var utils = {
+
+	//创建一个二维数组
+	createArray2: function(row, col){
+		var arr1 = new Array(row);
+		for(var i=0;i<col;i++) {
+			arr1[i] = new Array(col);
+		}
+		return arr1;
+	},
+    
+    //一定范围内的随机数
+    random1: function(start, end){
+    	return Math.floor(Math.random()*(end-start))+start
+    },
+    
+	//一定范围内随机产生点位
+	random2: function(x1, y1, x2, y2) {
+		var x1 = x1 || 0, //开始的x坐标
+			y1 = y1 || 0, //开始的y坐标
+			x2 = x2 || 20, //结束的x坐标
+			y2 = y2 || 20, //结束的y坐标
+			pointer = [],
+			x = this.random1(x1,x2),
+			y = this.random1(y1,y2);
+
+		//如果已经有东西了，那么继续随机
+		if(barrier[x][y]) {
+			return this.random2(x1, y1, x2, y2);
+		}
+		pointer[0] = x;
+		pointer[1] = y;
+		return pointer;
+	},
+
+	key:{
+		"left": 37,
+		"up": 38,
+		"right": 39,
+		"down": 40
+	}
+
+}
+var row = 20,
+	col = 20,
+	barrier = utils.createArray2(row, col),
+	dirKey = utils.key["right"],
+	mapElems = utils.createArray2(row, col);
+
+//地图类
+function sMap(row, col){
+	this.col = col;
+	this.row = row;
+}
+sMap.prototype.create = function(container){
+	var table = $.create("table");
+	var tbody = $.create("tbody");
+	for(var i=0;i<this.row;i++) {
+		var tr = $.create("tr");
+		for(var j=0;j<this.col;j++) {
+			var td = $.create("td");
+			mapElems[j][i] = tr.appendChild(td)
+		}
+		tbody.appendChild(tr);
+	}
+	table.appendChild(tbody);
+	container.appendChild(table);
+	addBarrier("food");
+	//console.log(mapElems)
+}
+
+function Snake() {
+	this.snakePointer = []; //储存蛇的每一节坐标
+	this.speed = 10;//蛇的爬行速度
+	this.len = 3;//蛇的长度
+	this.timer = null;
+	//this.barrier = barrier;
+}
+
+//创建蛇
+Snake.prototype.create = function(){
+	
+	var pointer = utils.random2(this.len-1, this.len-1, col/2)//蛇随机出现位置
+
+	for(var i=0; i<this.len; i++) {
+		var x = pointer[0]-i,
+			y = pointer[1];
+		this.snakePointer.push([x,y]); //记录蛇的初始位置
+		barrier[x][y] = "snake";
+	}
+}
+
+//蛇运动
+Snake.prototype.walk = function(){
+	console.log(this.snakePointer)
+	var _this = this;
+	if(this.timer) clearInterval(this.timer);
+	this.timer = setInterval(function(){
+		_this.step(_this);
+	}, Math.floor(3000/_this.speed));
+}	
+
+//蛇行走一步
+Snake.prototype.step = function(_this){
+	var hX = _this.snakePointer[0][0], //蛇头的x坐标
+		hY = _this.snakePointer[0][1]; //蛇头的Y坐标
+    switch(dirKey){
+		case utils.key["left"]:
+			hX--
+		break;
+		case utils.key["up"]:
+			hY--
+		break;
+		case utils.key["right"]:
+			hX++
+		break;
+		case utils.key["down"]:
+			hY++
+		break;
+	}
+
+	if(hX>=col || hX<0 || hY>=row || hY<0 || barrier[hX][hY] == "snake") {
+		clearInterval(_this.timer);
+		alert("游戏结束！");
+	}
+
+	//吃东西逻辑
+	if(barrier[hX][hY] == "food") {
+		barrier[hX][hY] = false;
+		addBarrier("food")
+	} else {
+
+		//擦除尾部
+		var lastX = _this.snakePointer[_this.snakePointer.length-1][0],
+			lastY = _this.snakePointer[_this.snakePointer.length-1][1];
+		barrier[lastX][lastY] = false;
+		mapElems[lastX][lastY].className = "";
+		_this.snakePointer.pop();
+	}
+
+    _this.snakePointer.unshift([hX, hY]);
+    barrier[hX][hY] = "snake";
+    mapElems[hX][hY].className = "snake";
+
+    _this.len = _this.snakePointer.length;
+
+}
+
+Snake.prototype.start = function(){
+	this.create();
+	this.walk();
+}		
+
+//键盘控制
+function keyHandler(e) {
+	var e = e || window.event;
+	dirKey = Math.abs(e.keyCode - dirKey ) !=2 && e.keyCode >36 && e.keyCode <41 ? e.keyCode : dirKey; //只能是方向键且不能是反向
+	return false;
+}
+
+//添加障碍(包括食物)
+function addBarrier(name){
+	var pointer = utils.random2();
+	barrier[pointer[0]][pointer[1]] = name;
+	mapElems[pointer[0]][pointer[1]].className = name;
+}
+
+var map = new sMap(row, col);
+var snake = new Snake();
+map.create($.id("map"));
+snake.start();
+document.onkeydown = keyHandler;
+</script> 
+</body>
+</html>
